@@ -1,0 +1,23 @@
+This is a brief description of the new version of the people_app.
+More detailed documentation will come in my blog in the end of GSOC.
+
+The app has been extended with following flags:
+
+-segment_people <path_to_svm_file>     activates the segmentation: false by default
+-lzf  <path_to_svm_file>    reading data from lzf files    false by default
+-lzf_fps  <lzf_fps>    reading data from lzf files    fps for reading the lzf files: 30 by default
+-resample <bool_value>    activates the upsampling. Caution: experimental, only works with pcd files and inactive segmentation (happens manually)
+-tracking <bool_value>    activates tracking (on skeleton level, implemented in people_detector.cpp)
+
+Without the additional flags the app works as before (tracking, segmentation etc. are disabled by default).
+
+Examples of execution
+
+Live from kinect, active segmentation and tracking:
+./pcl_people_app -numTrees 3 -tree0 /path_to_tree_files/tree_20.txt -tree1 /path_to_tree_files/tree_20_1.txt -tree2 /path_to_tree_files/tree_20_2.txt  -segment_people /pcl/gpu/people/data/trainedLinearSVMForPeopleDetectionWithHOG.yaml -tracking 
+
+From lzf files, active segmentation and tracking:
+./pcl_people_app -numTrees 3 -tree0 /path_to_tree_files/tree_20.txt -tree1 /path_to_tree_files/tree_20_1.txt -tree2 /path_to_tree_files/tree_20_2.txt  -segment_people /pcl/gpu/people/data/trainedLinearSVMForPeopleDetectionWithHOG.yaml -lzf ./path_to_lzf_data_dir/ -tracking 1
+
+
+
