@@ -78,8 +78,7 @@
 
 #include <math.h>
 #include <string.h>
-#include <boost/python.hpp>
-using namespace boost::python;
+
 namespace pc = pcl::console;
 using namespace pcl::visualization;
 using namespace pcl::gpu;
@@ -323,7 +322,10 @@ class PeoplePCDApp
   public:
     typedef pcl::gpu::people::PeopleDetector PeopleDetector;
     ofstream skeleton_file;
-	ofstream pointcloud_file;
+	ofstream Larm_file, Lforearm_file, Lfoot_file, Lleg_file, Lknee_file, Lthigh_file, Lhips_file, Lelbow_file, Lhand_file;
+	ofstream Rarm_file, Rforearm_file, Rfoot_file, Rleg_file, Rknee_file, Rthigh_file, Rhips_file, Relbow_file, Rhand_file;
+	ofstream Neck_file, FaceLB_file, FaceRB_file, FaceLT_file, FaceRT_file, Rchest_file, Lchest_file;
+	
     enum
     {
       COLS = 640, ROWS = 480
@@ -459,177 +461,17 @@ class PeoplePCDApp
 		return (double) -1;
     }
 
-	//Inspired by http://math.stackexchange.com/questions/99299/best-fitting-plane-given-a-set-of-points
-	Eigen::MatrixXf fitSVDPlane (const pcl::PointCloud<PointXYZ> &cloud)
+	void cloud2disk(const pcl::PointCloud<PointXYZ> &ptr, std::ofstream& pointcloud_file, std::string bodypart)
 	{
-		int i = -1, cloud_size = cloud.points.size ();
-		Eigen::Matrix4f data;
+		std::stringstream cnt;
+		cnt << counter_;
+		std::string count = cnt.str();
 
-		//fill matrix with data
-		if (cloud.is_dense)
-		{
-			for ( int c = 0 ; c < cloud.points.size() ; c++ )
-				data.row(c) << cloud.points[c].x, cloud.points[c].y, cloud.points[c].z, 1;
-
-			//get dimensional means
-			float x_mean = (float)(data.col(0).sum())/(float)(data.col(0).rows());
-			float y_mean = (float)(data.col(1).sum())/(float)(data.col(1).rows());
-			float z_mean = (float)(data.col(2).sum())/(float)(data.col(2).rows());
-
-			//center the data
-			for ( int c = 0 ; c < cloud.points.size() ; c++ )
-			{
-				data.row(c)[0] = data.row(c)[0] - x_mean;
-				data.row(c)[1] = data.row(c)[1] - y_mean;
-				data.row(c)[2] = data.row(c)[2] - z_mean;
-			}
-		}
-		// NaN or Inf values could exist => check for them
-		else
-		{
-			for ( int c = 0 ; c < cloud.points.size() ; c++ )
-			{
-			  // Check if the point is invalid
-				if (!pcl_isfinite(cloud.points[c].x) || !pcl_isfinite(cloud.points[c].y) || !pcl_isfinite(cloud.points[c].z))
-					continue;
-				data.row(c) << cloud.points[c].x, cloud.points[c].y, cloud.points[c].z, 1;
-
-				//get dimensional means
-				float x_mean = (float)(data.col(0).sum())/(float)(data.col(0).rows());
-				float y_mean = (float)(data.col(1).sum())/(float)(data.col(1).rows());
-				float z_mean = (float)(data.col(2).sum())/(float)(data.col(2).rows());
-
-				//center the data
-				for ( int c = 0 ; c < cloud.points.size() ; c++ )
-				{
-					data.row(c)[0] = data.row(c)[0] - x_mean;
-					data.row(c)[1] = data.row(c)[1] - y_mean;
-					data.row(c)[2] = data.row(c)[2] - z_mean;
-				}
-			}
-		}
-		//get SVD
-		Eigen::JacobiSVD<Eigen::MatrixXf> svd(data, Eigen::ComputeThinU | Eigen::ComputeThinV);
-		//source states: The normal vector of the best-fitting plane is the left singular vector corresponding to the least singular value.
-		//Which corresponds to http://numpy-discussion.10968.n7.nabble.com/3d-plane-to-point-cloud-fitting-using-SVD-td27152.html
-		//as documentation states: Its left singular vectors are the columns of the thin U matrix
-		return svd.matrixU();
-	}
-
-	//fits the plane as described at http://math.stackexchange.com/questions/417513/least-squares-plane-using-matricies
-	//and http://www.nlreg.com/plane3d.htm
-	//rewrite X + Y + Z + D = 0 to Z = -X - Y - D
-	//return solution
-	Eigen::Vector3f fitPlane (const pcl::PointCloud<PointXYZ> &cloud)
-	{	
-		cout << "In function!"; 
-		int i = -1, cloud_size = cloud.points.size ();
-		Eigen::Matrix3f data;
-		Eigen::Vector3f b;
-		cout << "Checking if cloud is dense\n";
-		//fill matrix with data
-		if (cloud.is_dense)
-		{
-			cout << "Cloud is dense!\n";
-			for ( int c = 0 ; c < cloud.points.size() ; c++ )
-			{
-				data.row(c) << cloud.points[c].x, cloud.points[c].y, 1;
-				b.row(c) << cloud.points[c].z;
-			}
-/*			//center data!
-			//get dimensional means
-			float x_mean = (float)(data.col(0).sum())/(float)(data.col(0).rows());
-			float y_mean = (float)(data.col(1).sum())/(float)(data.col(1).rows());
-			float z_mean = (float)(data.col(2).sum())/(float)(data.col(2).rows());
-
-			//center the data
-			for ( int c = 0 ; c < samples ; c++ )
-			{
-				data.row(c)[0] = data.row(c)[0] - x_mean;
-				data.row(c)[1] = data.row(c)[1] - y_mean;
-				data.row(c)[2] = data.row(c)[2] - z_mean;
-			}
-*/
-		}
-		// NaN or Inf values could exist => check for them
-		else
-		{
-			cout << "cloud is not dense \n";
-			for ( int c = 0 ; c < cloud.points.size() ; c++ )
-			{
-			  // Check if the point is invalid
-				if (!pcl_isfinite(cloud.points[c].x) || !pcl_isfinite(cloud.points[c].y) || !pcl_isfinite(cloud.points[c].z))
-					continue;
-				data.row(c) << cloud.points[c].x, cloud.points[c].y, 1;
-				b.row(c) << cloud.points[c].z;
-			}
-		}
-		cout << "SOLVING! \n";
-		Eigen::Vector3f solution = data.colPivHouseholderQr().solve(b);
-		cout << "RETURNING SOLUTION";
-		return solution;
-	}
-
-	//find common point on line where planes intersect
-	//because if we know the slope (cross product between the planes) of the line and a point on this line, we know where the planes intersect
-	//inspired by http://stackoverflow.com/questions/6408670/intersection-between-two-planes
-	//and https://www.youtube.com/watch?v=jozabh0lFmo
-	Eigen::Vector3f findCommonPoint(Eigen::Vector3f plane1, Eigen::Vector3f plane2)
-	{
-		cout << "finding common point!\n";
-		Eigen::Vector3f point;
-		//take the cross products between the planes. If the result is not 0, the planes are not perpedicular to each other.
-		//this means that there must be a solution. Else return a solution of (-1, -1, -1)
-		if (plane1.dot(plane2) != 0 )
-		{
-			cout << "planes are NOT perpendicular!\n";
-			float y = (-plane1[2] - plane1[3]) / (plane1[1]);
-			float z = (((plane2[1]/plane1[1])*plane1[3]) - plane2[3]) / (plane2[2] -(plane1[2]*(plane2[1]/plane1[1])));
-			point << 0, y, z;
-		}
-		else
-			cout << "planes are perpendicular!\n";
-			point << -1, -1, -1;
-
-		return point;
-	}
-
-	void getLineEq(const char* limb)
-	{
-		cout << "GETTING LINE EQUATION!\n";
-		if (strcmp(limb, "Lelbow") == 0)
-		{
-			cout << "GETTING ELBOW!\n";
-			const pcl::PointCloud<pcl::PointXYZ>::Ptr LarmPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[Larm].indices.indices));
-			cout << "got pointer, fitting plane!\n";
-			Eigen::Vector3f plane1 = fitPlane(*LarmPtr);
-
-			const pcl::PointCloud<pcl::PointXYZ>::Ptr LforearmPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[Lforearm].indices.indices));
-			Eigen::Vector3f plane2 = fitPlane(*LforearmPtr);
-			cout << "FIND COMMON POINT\n";
-			Eigen::Vector3f point = findCommonPoint(plane1, plane2);
-			Eigen::Vector3f line = plane1.cross(plane2);
-			cout << "line eq: " << line << "\n";
-		}
-		else if (strcmp(limb, "Rarm") == 0)
-		{
-			const pcl::PointCloud<pcl::PointXYZ>::Ptr RarmPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[Rarm].indices.indices));
-			Eigen::Vector3f plane1 = fitPlane(*RarmPtr);
-
-			const pcl::PointCloud<pcl::PointXYZ>::Ptr RforearmPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[Rforearm].indices.indices));
-			Eigen::Vector3f plane2 = fitPlane(*RforearmPtr);
-		}
-	}
-
-	char const* greet()
-	{
-		return "hello, world";
-	}
-
-	BOOST_PYTHON_MODULE(hello_ext)
-	{
-		using namespace boost::python;
-		def("greet", greet);
+		std::string filename = count + "_" + bodypart + ".txt";
+		pointcloud_file.open (filename, std::ios::app);
+		for (int c = 0 ; c < ptr.points.size() ; c++)
+			pointcloud_file << ptr.points[c].x  << "," << ptr.points[c].y  << "," << ptr.points[c].z << "," << 1 << "\n";
+		pointcloud_file.close();
 	}
 
 	void storeFilesToDisk(const pcl::PointCloud<PointXYZ> &LarmPtr, const pcl::PointCloud<PointXYZ> &LforearmPtr, const pcl::PointCloud<PointXYZ> &RarmPtr, const pcl::PointCloud<PointXYZ> &RforearmPtr)
@@ -639,13 +481,11 @@ class PeoplePCDApp
 		cnt << counter_;
 		std::string count = cnt.str();
 
-		//std::string filename_Larm = count + "_Larm.txt";
-		//pointcloud_file.open (filename_Larm, std::ios::app);
-		char* strdata = strdup("");
+		std::string filename_Larm = count + "_Larm.txt";
+		pointcloud_file.open (filename_Larm, std::ios::app);
 		for (int c = 0 ; c < LarmPtr.points.size() ; c++)
-			//pointcloud_file << LarmPtr.points[c].x  << "," << LarmPtr.points[c].y  << "," << LarmPtr.points[c].z << "," << 1 << "\n";
-			strdata = strdupcat(strdata, LarmPtr.points[c].x, ",", LarmPtr.points[c].y, ",", LarmPtr.points[c].z, ",", "\n", NULL);
-		//pointcloud_file.close();
+			pointcloud_file << LarmPtr.points[c].x  << "," << LarmPtr.points[c].y  << "," << LarmPtr.points[c].z << "," << 1 << "\n";
+		pointcloud_file.close();
 
 		std::string filename_Lforearm = count + "_Lforearm.txt";
 		pointcloud_file.open (filename_Lforearm, std::ios::app);
@@ -664,75 +504,71 @@ class PeoplePCDApp
 		for (int c = 0 ; c < RforearmPtr.points.size() ; c++)
 			pointcloud_file << RforearmPtr.points[c].x  << "," << RforearmPtr.points[c].y  << "," << RforearmPtr.points[c].z << "," << 1 << "\n";
 		pointcloud_file.close();
-		/*pcl::PointCloud<pcl::PointXYZ> LarmCloud, LforearmCloud, RarmCloud, RforearmCloud;
-
-		LarmCloud.width = LarmPtr.width;
-		LarmCloud.height = LarmPtr.height;
-		LarmCloud.is_dense = LarmPtr.is_dense;
-		LarmCloud.points.resize (LarmCloud.width * LarmCloud.height);
-		LarmCloud.points = LarmPtr.points;
-
-		LforearmCloud.width = LforearmPtr.width;
-		LforearmCloud.height = LforearmPtr.height;
-		LforearmCloud.is_dense = LforearmPtr.is_dense;
-		LforearmCloud.points.resize (LforearmCloud.width * LforearmCloud.height);
-		LforearmCloud.points = LforearmPtr.points;
-
-		RarmCloud.width = RarmPtr.width;
-		RarmCloud.height = RarmPtr.height;
-		RarmCloud.is_dense = RarmPtr.is_dense;
-		RarmCloud.points.resize (RarmCloud.width * RarmCloud.height);
-		RarmCloud.points = RarmPtr.points;
-
-		RforearmCloud.width = RforearmPtr.width;
-		RforearmCloud.height = RforearmPtr.height;
-		RforearmCloud.is_dense = RforearmPtr.is_dense;
-		RforearmCloud.points.resize (RforearmCloud.width * RforearmCloud.height);
-		RforearmCloud.points = RforearmPtr.points;
-
-		pcl::io::savePCDFileASCII (make_name(counter_, "Larm.pcd"), LarmCloud);
-		pcl::io::savePCDFileASCII (make_name(counter_, "Lforearm.pcd"), LforearmCloud);
-		pcl::io::savePCDFileASCII (make_name(counter_, "Rarm.pcd"), RarmCloud);
-		pcl::io::savePCDFileASCII (make_name(counter_, "Rforearm.pcd"), RforearmCloud);*/
-}
-	//copied online at http://forum.codecall.net/topic/55589-howto-declare-a-string-without-knowing-how-big-it-would-be-in-c/
-	char* strdupcat(const char* first, ...) 
-	{
-	  va_list args;
-	  char* buf;
-	  const char* arg;
-	  size_t len = strlen(first);
-
-	  /* 1. calculate the length of the output string */
-	  va_start(args, first);
-	  while ((arg = va_arg(args, const char*)) != NULL) 
-	  {
-		len += strlen(arg);
-	  }
-	  va_end(args);
-
-	  /* 2. allocate memory for the output string */
-	  buf = (char*) malloc(len + 1);
-	  if (buf == NULL) return NULL;
-
-	  /* 3. copy strings into the output buffer */
-	  strcpy(buf, first);
-	  va_start(args, first);
-	  while ((arg = va_arg(args, const char*)) != NULL) 
-	  {
-		strcat(buf, arg);
-	  }
-	  va_end(args);
-	  return buf;
 	}
 
 	void storeFiles()
 	{
 		const pcl::PointCloud<pcl::PointXYZ>::Ptr LarmPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[Larm].indices.indices));
+		cloud2disk(*LarmPtr, Larm_file, "LeftArm");
 		const pcl::PointCloud<pcl::PointXYZ>::Ptr LforearmPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[Lforearm].indices.indices));
+		cloud2disk(*LforearmPtr, Lforearm_file, "LeftForearm");
 		const pcl::PointCloud<pcl::PointXYZ>::Ptr RarmPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[Rarm].indices.indices));
+		cloud2disk(*RarmPtr, Rarm_file, "RightArm");
 		const pcl::PointCloud<pcl::PointXYZ>::Ptr RforearmPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[Rforearm].indices.indices));
-		storeFilesToDisk(*LarmPtr, *LforearmPtr, *RarmPtr, *RforearmPtr);
+		cloud2disk(*RforearmPtr, Rforearm_file, "RightForeArm");
+
+		const pcl::PointCloud<pcl::PointXYZ>::Ptr LfootPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[Lfoot].indices.indices));
+		cloud2disk(*LfootPtr, Lfoot_file, "LeftFoot");
+		const pcl::PointCloud<pcl::PointXYZ>::Ptr LlegPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[Lleg].indices.indices));
+		cloud2disk(*LlegPtr, Lleg_file, "LeftLeg");
+
+		const pcl::PointCloud<pcl::PointXYZ>::Ptr RfootPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[Rfoot].indices.indices));
+		cloud2disk(*RfootPtr, Rfoot_file, "RightFoot");
+		const pcl::PointCloud<pcl::PointXYZ>::Ptr RlegPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[Rleg].indices.indices));
+		cloud2disk(*RlegPtr, Rleg_file, "RightLeg");
+
+		const pcl::PointCloud<pcl::PointXYZ>::Ptr LkneePtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[Lknee].indices.indices));
+		cloud2disk(*LkneePtr, Lknee_file, "LeftKnee");
+		const pcl::PointCloud<pcl::PointXYZ>::Ptr RkneePtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[Rknee].indices.indices));
+		cloud2disk(*RkneePtr, Rknee_file, "RightKnee");
+
+		const pcl::PointCloud<pcl::PointXYZ>::Ptr LthighPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[Lthigh].indices.indices));
+		cloud2disk(*LthighPtr, Lthigh_file, "LeftThigh");
+		const pcl::PointCloud<pcl::PointXYZ>::Ptr RthighPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[Rthigh].indices.indices));
+		cloud2disk(*RthighPtr, Rthigh_file, "RightThigh");
+
+		const pcl::PointCloud<pcl::PointXYZ>::Ptr LhipsPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[Lhips].indices.indices));
+		cloud2disk(*LhipsPtr, Lhips_file, "LeftHip");
+		const pcl::PointCloud<pcl::PointXYZ>::Ptr RhipsPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[Rhips].indices.indices));
+		cloud2disk(*RhipsPtr, Rhips_file, "RightHip");
+
+//		const pcl::PointCloud<pcl::PointXYZ>::Ptr LelbowPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[Lelbow].indices.indices));
+//		cloud2disk(*LelbowPtr, Lelbow_file, "LeftElbow");
+//		const pcl::PointCloud<pcl::PointXYZ>::Ptr RelbowPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[Relbow].indices.indices));
+//		cloud2disk(*RelbowPtr, Relbow_file, "RightElbow");
+
+		const pcl::PointCloud<pcl::PointXYZ>::Ptr LhandPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[Lhand].indices.indices));
+		cloud2disk(*LhandPtr, Lhand_file, "LeftHand");
+		const pcl::PointCloud<pcl::PointXYZ>::Ptr RhandPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[Rhand].indices.indices));
+		cloud2disk(*RhandPtr, Rhand_file, "RightHand");
+
+		const pcl::PointCloud<pcl::PointXYZ>::Ptr NeckPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[Neck].indices.indices));
+		cloud2disk(*NeckPtr, Neck_file, "Neck");
+
+		const pcl::PointCloud<pcl::PointXYZ>::Ptr FaceLBPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[FaceLB].indices.indices));
+		cloud2disk(*FaceLBPtr, FaceLB_file, "FaceLB");
+		const pcl::PointCloud<pcl::PointXYZ>::Ptr FaceRBPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[FaceRB].indices.indices));
+		cloud2disk(*FaceRBPtr, FaceRB_file, "FaceRB");
+
+		const pcl::PointCloud<pcl::PointXYZ>::Ptr FaceLTPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[FaceLT].indices.indices));
+		cloud2disk(*FaceLTPtr, FaceLT_file, "FaceLT");
+		const pcl::PointCloud<pcl::PointXYZ>::Ptr FaceRTPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[FaceRT].indices.indices));
+		cloud2disk(*FaceRTPtr, FaceRT_file, "FaceRT");
+
+		const pcl::PointCloud<pcl::PointXYZ>::Ptr LchestPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[Lchest].indices.indices));
+		cloud2disk(*LchestPtr, Lchest_file, "Lchest");
+		const pcl::PointCloud<pcl::PointXYZ>::Ptr RchestPtr (new pcl::PointCloud<pcl::PointXYZ> (people_detector_.cloud_host_, people_detector_.skeleton_blobs_[Rchest].indices.indices));
+		cloud2disk(*RchestPtr, Rchest_file, "Rchest");
 	}
 
 	void
@@ -799,6 +635,7 @@ class PeoplePCDApp
 
       //depth_view_.spinOnce (1, true);
 
+	  write_ = true;
       if (write_)
       {
         PCL_VERBOSE("PeoplePCDApp::visualizeAndWrite : (I) : Writing to disk");
@@ -812,7 +649,14 @@ class PeoplePCDApp
          savePNGFile(make_name(counter_, "s2"), labels);
          savePNGFile(make_name(counter_, "d1"), people_detector_.depth_device1_);
          savePNGFile(make_name(counter_, "d2"), people_detector_.depth_device2_);*/
-        skeleton_file.open ("./skeleton.txt", std::ios::app);
+		savePNGFile(make_name(counter_, "c2"), cmap_host_);
+
+		std::stringstream cnt;
+		cnt << counter_;
+		std::string count = cnt.str();
+		std::string skel_fname = count + "_skeleton.txt";
+
+        skeleton_file.open (skel_fname, std::ios::app);
         skeleton_file << "\n" << counter_ << " " << time_ms_;
         skeleton_file << "\n";
         for (int i = 0; i < 27; i++)
@@ -820,8 +664,8 @@ class PeoplePCDApp
 
           Eigen::Vector4f j = people_detector_.skeleton_joints_[i];
 
-          skeleton_file << j[0] << " " << j[1] << " " << j[2];
-          skeleton_file << "\n";
+          skeleton_file << j[0] << "," << j[1] << "," << j[2] << "\n";
+          //skeleton_file << "\n";
 
         }
         skeleton_file << " ";
