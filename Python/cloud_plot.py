@@ -47,12 +47,15 @@ def drawskeleton_2d(filename, fig=None, ax=None):
 
     lines = [line.rstrip('\n').split(',') for line in open(filename)]
     joints = []
+    nr = 0
     for line in lines:
         if len(line) == 3:
             line = map(float, line)
             line = projectdims.project3dto2d(line)
-            ax.plot([line[0]],[line[1]],'o')
+            if nr not in [1, 3, 4, 5, 7, 11, 13, 15, 17]:
+                ax.plot([line[0]],[line[1]],'o')
             joints.append(line)
+            nr = nr + 1
 
     #draw limbs
     drawlimb_2d(joints[10], joints[20], ax=ax)
@@ -90,11 +93,14 @@ def drawskeleton(filename, fig=None, ax=None):
 
     lines = [line.rstrip('\n').split(',') for line in open(filename)]
     joints = []
+    nr = 0
     for line in lines:
         if len(line) == 3:
             line = map(float, line)
-            ax.plot([line[0]],[line[1]],[line[2]],'o')
+            if nr not in [1, 3, 4, 5, 7, 11, 13, 15, 17]:
+                ax.plot([line[0]],[line[1]],[line[2]],'o')
             joints.append(line)
+            nr = nr + 1
 
     #draw limbs
     drawlimb(joints[10], joints[20], ax=ax)
@@ -183,6 +189,27 @@ def visualize_clouds_2d(filenum, new_path=None):
                     # plot points in 3D
                     ax.plot(data[:, 0], data[:, 1], '.')
     plt.show()
+    
+#used to be loadfiles
+def visualize_clouds_2d_new_joint(filenum, limb, new_path=None):
+    if new_path is not None:
+        path = new_path
+    fig=plt.figure()
+    ax = fig.gca()
+    cloud1 = None
+    cloud2 = None
+    
+    if limb == "Larm":
+        for i in os.listdir(path):
+            fullpath = os.path.join(path, i)
+            if os.path.isfile(fullpath) and i.startswith(str(str(filenum) + '_')):
+                if 'LeftArm' in fullpath:
+                    cloud1 = np.loadtxt(fullpath, fig=fig, ax=ax)
+                elif 'LeftForearm' in fullpath:
+                    cloud2 = np.loadtxt(fullpath, fig=fig, ax=ax)
+                if (cloud1 is not None) and (cloud2 is not None):
+                    #calc joint
+                    new_joint_loc = cloud_linalg.custom_joint_loc(cloud1, cloud2)
 
 
 def add_plot(data, fig=None):
@@ -249,6 +276,3 @@ def plot_old_new_cluster_centers(filenr, limb1, limb2, path="C:/Users/Cassandra/
     ax.plot([new_cluster_centers[1][0]], [new_cluster_centers[1][1]], [new_cluster_centers[1][2]],'o', markersize=14)
 
     plt.show()
-    
-def overlay_skeleton(filenr, path=None):
-    fig, fig2 = visualize_clouds_3d(filenr, new_path=path)

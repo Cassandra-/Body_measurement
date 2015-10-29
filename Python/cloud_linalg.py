@@ -15,7 +15,7 @@ def get_cloud_center(cloud):
 #[Ax By D] [t] = [Z]
 
 def fitPlaneLstsq(cloud):
-    #create A matrx (X, Y and D)
+    #create A matrix (X, Y and D)
     A = np.column_stack((cloud[:,0],cloud[:,1],cloud[:,3]))
     b = cloud[:,2]
     return np.linalg.lstsq(A, b)[0]
@@ -136,3 +136,14 @@ def find_joint_location(cloud1, cloud2, line1, line2):
             min_dist_point = point
 
     return min_dist_point
+    
+def custom_joint_loc(cloud1, cloud2):
+    cloud1_normal = fitPlaneLstsqAlt(cloud1)
+    cloud2_normal = fitPlaneLstsqAlt(cloud2)
+
+    intersection_direction, offset = plane_intersection(cloud1_normal, cloud2_normal, cloud1, cloud2)
+    proj_cloud1_line = proj_cloud_line(cloud1, intersection_direction, offset)
+    proj_cloud2_line = proj_cloud_line(cloud2, intersection_direction, offset)
+
+    joint_loc = find_joint_location(cloud1, cloud2, proj_cloud1_line, proj_cloud2_line)
+    return joint_loc

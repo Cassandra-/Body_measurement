@@ -40,6 +40,7 @@ if __name__ == "__main__":
     else:
         print "No dirpath passed! Using default: ", dirpath
     '''
+    
     #visualize clouds
     #visualize_clouds(5, new_path="/media/cassandra/Local Disk/Documents and Settings/Cassandra/Documents/GitHub/Body_measurement/Python/Data/Test 4 - Normal")
     cloud_plot.visualize_clouds_3d(5, new_path="C:\Users\Cassandra\Documents\GitHub\Body_measurement\Python\Data\Test 4 - Normal")
@@ -52,6 +53,7 @@ if __name__ == "__main__":
     
     #cloud_plot.plot_old_new_clusters(filenr, limb1, limb2, path=dirpath)
     #cloud_plot.plot_old_new_cluster_centers(filenr, limb1, limb2, path=dirpath)
+    
 
 '''
     print "EXECUTING SCRIPT!"
