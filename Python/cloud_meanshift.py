@@ -11,10 +11,13 @@ def perform_meanshift(cloud1, cloud2):
     ms = MeanShift(bandwidth=bandwidth, bin_seeding=True)
     # Perform mean shift
     ms.fit(full_cloud)
+    labels = ms.labels_
+    cluster_centers = ms.cluster_centers_
+    n_clusters_ = labels.max()+1
 
-    return full_cloud, ms.cluster_centers_
+    return full_cloud, cluster_centers, n_clusters_, labels
     
-
+# load a cloud and return the new clusters
 def load_cloud(nr, cl1, cl2, path="C:/Users/Cassandra/Documents/GitHub/Body_measurement/Python/Data/Test 4 - Normal"):
     cloud1 = np.loadtxt(str(path + '/' + str(nr) + '_' + cl1 + '.txt'), delimiter=',')
     cloud2 = np.loadtxt(str(path + '/' + str(nr) + '_' + cl2 + '.txt'), delimiter=',')
@@ -23,11 +26,9 @@ def load_cloud(nr, cl1, cl2, path="C:/Users/Cassandra/Documents/GitHub/Body_meas
     #find cluster centers
     A_center = cloud_linalg.get_cloud_center(A)
     B_center = cloud_linalg.get_cloud_center(B)
-    print "Original cloud center A: ", A_center
-    print "Original cloud center B: ", B_center
     full_cloud, new_cluster_centers = perform_meanshift(A, B)
     
-    return assign_to_cluster(full_cloud, new_cluster_centers)
+    return [A_center, B_center], assign_to_cluster(full_cloud, new_cluster_centers), new_cluster_centers
     
 def assign_to_cluster(cloud, cluster_centers):
     nr_clouds = len(cluster_centers)

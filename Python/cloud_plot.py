@@ -3,6 +3,9 @@ from mpl_toolkits.mplot3d import axes3d
 import matplotlib.pyplot as plt
 import os
 import projectdims
+import cloud_meanshift
+import cloud_linalg
+from itertools import cycle
 
 #plot everything
 def plot_results(cloud1, cloud2, proj_plane1, proj_plane2, arm_line_proj, forearm_line_proj, joint_loc):
@@ -154,3 +157,52 @@ def add_plot_2d(data, fig=None):
     ax4.plot(data[:, 0], data[:, 1], '.')
     plt.show()
     return fig
+    
+def plot_old_new_clusters(filenr, limb1, limb2, path="C:/Users/Cassandra/Documents/GitHub/Body_measurement/Python/Data/Test 4 - Normal"):
+    cloud1 = np.loadtxt(str(path + '/' + str(filenr) + '_' + limb1 + '.txt'), delimiter=',')
+    cloud2 = np.loadtxt(str(path + '/' + str(filenr) + '_' + limb2 + '.txt'), delimiter=',')
+    A = np.column_stack((cloud1[:,0],cloud1[:,1],cloud1[:,2]))
+    B = np.column_stack((cloud2[:,0],cloud2[:,1],cloud2[:,2]))
+    A_center = cloud_linalg.get_cloud_center(A)
+    B_center = cloud_linalg.get_cloud_center(B)
+    full_cloud, new_cluster_centers, n_clusters_, labels = cloud_meanshift.perform_meanshift(A, B)
+    
+    colors = cycle('bgrcmykbgrcmykbgrcmykbgrcmyk')
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+    for k, col in zip(range(n_clusters_), colors):
+        my_members = labels == k
+        cluster_center = new_cluster_centers[k]
+        ax.plot(full_cloud[my_members, 0], full_cloud[my_members, 1], full_cloud[my_members, 2], '.')
+        ax.plot([cluster_center[0]], [cluster_center[1]], [cluster_center[2]],'o', markersize=14)
+    
+    fig2 = plt.figure()
+    ax2 = fig2.gca(projection='3d')
+
+    ax2.plot(A[:,0], A[:,1], A[:,2], '.')
+    ax2.plot([A_center[0]], [A_center[1]], [A_center[2]],'o', markersize=14)
+    
+    ax2.plot(B[:,0], B[:,1], B[:,2], '.')
+    ax2.plot([B_center[0]], [B_center[1]], [B_center[2]],'o', markersize=14)
+
+    plt.show()
+    
+def plot_old_new_cluster_centers(filenr, limb1, limb2, path="C:/Users/Cassandra/Documents/GitHub/Body_measurement/Python/Data/Test 4 - Normal"):
+    cloud1 = np.loadtxt(str(path + '/' + str(filenr) + '_' + limb1 + '.txt'), delimiter=',')
+    cloud2 = np.loadtxt(str(path + '/' + str(filenr) + '_' + limb2 + '.txt'), delimiter=',')
+    A = np.column_stack((cloud1[:,0],cloud1[:,1],cloud1[:,2]))
+    B = np.column_stack((cloud2[:,0],cloud2[:,1],cloud2[:,2]))
+    A_center = cloud_linalg.get_cloud_center(A)
+    B_center = cloud_linalg.get_cloud_center(B)
+    full_cloud, new_cluster_centers, n_clusters_, labels = cloud_meanshift.perform_meanshift(A, B)
+    
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+    
+    ax.plot(full_cloud[:,0], full_cloud[:,1], full_cloud[:,2], '.')
+    ax.plot([A_center[0]], [A_center[1]], [A_center[2]],'o', markersize=14)
+    ax.plot([B_center[0]], [B_center[1]], [B_center[2]],'o', markersize=14)
+    ax.plot([new_cluster_centers[0][0]], [new_cluster_centers[0][1]], [new_cluster_centers[0][2]],'o', markersize=14)
+    ax.plot([new_cluster_centers[1][0]], [new_cluster_centers[1][1]], [new_cluster_centers[1][2]],'o', markersize=14)
+
+    plt.show()
