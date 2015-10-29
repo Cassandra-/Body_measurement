@@ -42,15 +42,16 @@ if __name__ == "__main__":
     '''
     #visualize clouds
     #visualize_clouds(5, new_path="/media/cassandra/Local Disk/Documents and Settings/Cassandra/Documents/GitHub/Body_measurement/Python/Data/Test 4 - Normal")
-    #cloud_plot.visualize_clouds(5, new_path="C:\Users\Cassandra\Documents\GitHub\Body_measurement\Python\Data\Test 4 - Normal")
-    
+    cloud_plot.visualize_clouds_3d(5, new_path="C:\Users\Cassandra\Documents\GitHub\Body_measurement\Python\Data\Test 4 - Normal")
+    cloud_plot.visualize_clouds_2d(5, new_path="C:\Users\Cassandra\Documents\GitHub\Body_measurement\Python\Data\Test 4 - Normal")
+        
     filenr = 5
     limb1 = "LeftArm"
     limb2 = "LeftForearm"
 #    old_cluster_centers, new_clusters, new_cluster_centers = cloud_meanshift.load_cloud(filenr, limb1, limb2)
     
-    cloud_plot.plot_old_new_clusters(filenr, limb1, limb2, path=dirpath)
-    cloud_plot.plot_old_new_cluster_centers(filenr, limb1, limb2, path=dirpath)
+    #cloud_plot.plot_old_new_clusters(filenr, limb1, limb2, path=dirpath)
+    #cloud_plot.plot_old_new_cluster_centers(filenr, limb1, limb2, path=dirpath)
 
 '''
     print "EXECUTING SCRIPT!"
