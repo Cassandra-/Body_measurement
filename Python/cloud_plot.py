@@ -40,7 +40,7 @@ def drawlimb(point1, point2, ax=None):
 def drawlimb_2d(point1, point2, ax=None):
     ax.plot([point1[0], point2[0]], [point1[1], point2[1]])
 
-def drawskeleton_2d(filename, fig=None, ax=None):
+def drawskeleton_2d(filename, point_left, point_right, fig=None, ax=None):
     if (fig is None) or (ax is None):
         fig = plt.figure()
         ax = fig.gca()
@@ -53,7 +53,12 @@ def drawskeleton_2d(filename, fig=None, ax=None):
             line = map(float, line)
             line = projectdims.project3dto2d(line)
             if nr not in [1, 3, 4, 5, 7, 11, 13, 15, 17]:
+                if (nr == 16) and (point_left is not None):
+                    line = projectdims.project3dto2d(point_left)
+                elif (nr == 12) and (point_right is not None):
+                    line = projectdims.project3dto2d(point_right)                    
                 ax.plot([line[0]],[line[1]],'o')
+                
             joints.append(line)
             nr = nr + 1
 
@@ -86,7 +91,7 @@ def drawskeleton_2d(filename, fig=None, ax=None):
     plt.show()
 
 #draw skeleton
-def drawskeleton(filename, fig=None, ax=None):
+def drawskeleton(filename, point_left, point_right, fig=None, ax=None):
     if (fig is None) or (ax is None):
         fig = plt.figure()
         ax = fig.gca(projection='3d')
@@ -98,6 +103,11 @@ def drawskeleton(filename, fig=None, ax=None):
         if len(line) == 3:
             line = map(float, line)
             if nr not in [1, 3, 4, 5, 7, 11, 13, 15, 17]:
+                if (nr == 16) and (point_left is not None):
+                    line = point_left
+                elif (nr == 12) and (point_right is not None):
+                    line = point_right
+
                 ax.plot([line[0]],[line[1]],[line[2]],'o')
             joints.append(line)
             nr = nr + 1
@@ -152,7 +162,7 @@ def visualize_clouds(filenum, new_path=None):
     return fig, fig2d
     
 #used to be loadfiles
-def visualize_clouds_3d(filenum, new_path=None):
+def visualize_clouds_3d(filenum, new_path=None, point_left=None, point_right=None):
     if new_path is not None:
         path = new_path
     fig=plt.figure()
@@ -162,7 +172,7 @@ def visualize_clouds_3d(filenum, new_path=None):
         fullpath = os.path.join(path, i)
         if os.path.isfile(fullpath) and i.startswith(str(str(filenum) + '_')):
             if 'skeleton' in fullpath:
-                drawskeleton(fullpath, fig=fig, ax=ax)
+                drawskeleton(fullpath, point_left, point_right, fig=fig, ax=ax)
             else:
                 data = np.loadtxt(fullpath, delimiter=',')
                 if len(data) > 0:
@@ -171,7 +181,7 @@ def visualize_clouds_3d(filenum, new_path=None):
     plt.show()
 
 #used to be loadfiles
-def visualize_clouds_2d(filenum, new_path=None):
+def visualize_clouds_2d(filenum, new_path=None, point_left=None, point_right=None):
     if new_path is not None:
         path = new_path
     fig=plt.figure()
@@ -181,7 +191,7 @@ def visualize_clouds_2d(filenum, new_path=None):
         fullpath = os.path.join(path, i)
         if os.path.isfile(fullpath) and i.startswith(str(str(filenum) + '_')):
             if 'skeleton' in fullpath:
-                drawskeleton_2d(fullpath, fig=fig, ax=ax)
+                drawskeleton_2d(fullpath, point_left, point_right, fig=fig, ax=ax)
             else:
                 data = np.loadtxt(fullpath, delimiter=',')
                 if len(data) > 0:
